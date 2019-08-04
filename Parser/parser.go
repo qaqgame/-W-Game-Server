@@ -1,7 +1,7 @@
 package Parser
 
 import (
-	"-w-Game/Model"
+	"wGame/Model"
 	"encoding/json"
 	"fmt"
 )

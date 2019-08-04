@@ -1,7 +1,7 @@
 package Global
 
 import (
-	"-w-Game/Model"
+	"wGame/Model"
 	"net"
 )
 

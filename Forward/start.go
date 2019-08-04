@@ -1,6 +1,6 @@
 package Forward
 
-import "-w-Game/Global"
+import "wGame/Global"
 
 func StartGame(connestablish chan int) {
 LOOP:

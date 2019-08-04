@@ -1,12 +1,12 @@
 package Forward
 
 import (
-	"-w-Game/Model"
+	"wGame/Model"
 	"fmt"
 	"net"
 	"time"
-	"-w-Game/Parser"
-	"-w-Game/Global"
+	"wGame/Parser"
+	"wGame/Global"
 )
 //获取request，构造response
 func ForwardData(reqchan chan Model.ReqEx,send chan int,c chan int)  {

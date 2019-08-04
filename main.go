@@ -4,11 +4,11 @@ import (
 	"net"
 	"fmt"
 	"io/ioutil"
-	"-w-Game/Parser"
+	"wGame/Parser"
 	"time"
-	"-w-Game/Model"
-	"-w-Game/Global"
-	"-w-Game/Forward"
+	"wGame/Model"
+	"wGame/Global"
+	"wGame/Forward"
 )
 
 func main() {
