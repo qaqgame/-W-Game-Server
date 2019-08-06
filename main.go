@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"bufio"
+	"wGame/Buffer"
 )
 
 
@@ -28,7 +29,7 @@ func main() {
 	}
 	defer listener.Close()
 	//根据连接数，判断开启转发计时器和转发器。都连接上时开始GAME
-	go Forward.StartGame(Global.ConnEstablish)
+	go Forward.StartGame()
 
 	for true {
 		conn,err := listener.Accept()
@@ -38,7 +39,7 @@ func main() {
 		//Global.Conns = append(Global.Conns, rw)
 		Global.Conns[rw] = conn.RemoteAddr().String()
 		fmt.Println(len(Global.Conns),"111rewr")
-		//通缉已有的连接数
+		//统计已有的连接数
 		Global.ConnCount++
 		Global.ConnEstablish <- Global.ConnCount
 
@@ -48,19 +49,32 @@ func main() {
 		timerChan := make(chan int,1)
 		//开启计时器和连接处理进程
 		go Timer(conn,timerChan,rw)
-		go handleConn(rw,timerChan)
+		go handleConn(conn,rw,timerChan)
 	}
 }
 
 //连接处理进程
-func handleConn(rw *bufio.ReadWriter,timerChan chan int)  {
+func handleConn(conn net.Conn,rw *bufio.ReadWriter,timerChan chan int)  {
 	fmt.Println("handleConn")
+	//生成buffer队列top改变消息通知channel
+	bufferchange     := make(chan *Buffer.Node,1)
+	bufferchangeBack := make(chan *Buffer.Node,1)
 
+	top,tail,size := Buffer.InitQueue()
+	//生成独自的channel,发送从缓冲区中读取下一条信息的signal
+	MyChannel := make(chan int, 1)
+	remoteAddr := conn.RemoteAddr().String()
+	Global.PlayersChannel[remoteAddr] = MyChannel
+	Global.PlayersChannel[remoteAddr] <- 1
+
+	//
 	var result []byte
-	msgbuf := bytes.NewBuffer(make([]byte,0,10240))
+	msgbuf  := bytes.NewBuffer(make([]byte,0,10240))
 	databuf := make([]byte,4096)
-	length := 0
+	length  := 0
 	ulength := uint32(0)
+
+	go ReadFromBufferQueue(remoteAddr,top,size,bufferchange,bufferchangeBack)
 
 	for true {
 		//处理粘包，并读取数据
@@ -76,16 +90,76 @@ func handleConn(rw *bufio.ReadWriter,timerChan chan int)  {
 		if string(result) == "conn close" {
 			break
 		}
+
 		//处理正常游戏内容数据包
 		//解析json数据
 		req := Parser.ParserReq(result)
 		//重新组装新格式
 		var reqex Model.ReqEx
-		reqex.Request = *req
-		reqex.UserId = req.UserID
-		//读取的内容push进入channel
-		Global.AllDataSlice <- reqex
-		fmt.Println(*req)
+		reqex.Request    = *req
+		reqex.UserId     = req.UserID
+		reqex.RemoteAddr = conn.RemoteAddr().String()
+
+		//读取的内容插入缓冲区队列中
+		//head := Buffer.PushIntoQueue(reqex)
+		select {
+		case data := <-bufferchangeBack:
+			top = data
+			temp := Buffer.PushIntoQueue(reqex,top,tail,size)
+			tail = temp[1]
+			bufferchange <- temp[0]
+		default:
+			temp := Buffer.PushIntoQueue(reqex,top,tail,size)
+			tail = temp[1]
+			bufferchange <- temp[0]
+		}
+
+		//从缓冲区中取出数据，加入channel中
+		//TODO
+		//处理为nil的情况
+
+		//fmt.Println(*req)
+	}
+}
+
+//从缓冲区读取，与conn读取并行执行
+func ReadFromBufferQueue(remoteaddr string,top *Buffer.Node,size *int,bufferchange chan *Buffer.Node,bufferchangeBack chan *Buffer.Node) {
+	for true {
+		select {
+		case <- Global.PlayersChannel[remoteaddr]:
+			//fmt.Println("open")
+		LOOP:
+			for true {
+				select {
+				case data := <-bufferchange:
+					top = data
+					temp := Buffer.PopFromQueue(top,size)
+					if temp != nil {
+						//fmt.Println(temp[0].Value)
+						bufferchangeBack <- temp[1]
+						if temp[0] == nil {
+							fmt.Println("temp[0] is nil")
+						}
+						Global.AllDataSlice <- temp[0].Value
+						break LOOP
+					}else {
+						time.Sleep(5*time.Millisecond)
+						continue LOOP
+					}
+				default:
+					temp := Buffer.PopFromQueue(top,size)
+					if temp != nil {
+						//fmt.Println(temp[0].Value)
+						Global.AllDataSlice <- temp[0].Value
+						break LOOP
+					}else {
+						time.Sleep(5*time.Millisecond)
+						continue LOOP
+					}
+				}
+			}
+			//fmt.Println("over")
+		}
 	}
 }
 
@@ -103,7 +177,6 @@ func Timer(conn net.Conn,timerChan chan int,rw *bufio.ReadWriter) {
 			fmt.Println("OUTLINE")
 			conn.Close()    //关闭连接
 			//删除连接
-			//TODO
 			delete(Global.Conns,rw)
 			return
 			//
@@ -152,7 +225,7 @@ func ReadFromBuffer(databuf []byte,msgbuf *bytes.Buffer,length int, ulength uint
 		}
 		if length > 0 && msgbuf.Len() >= length {
 			result = msgbuf.Next(length)
-			fmt.Println(string(result), msgbuf.Len())
+			//fmt.Println(string(result), msgbuf.Len())
 			//msgbuf.Reset()
 			length = 0
 		} else {

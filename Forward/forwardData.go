@@ -9,46 +9,52 @@ import (
 	"bufio"
 )
 //获取request，构造response
-func ForwardData(reqchan chan Model.ReqEx,send chan int,c chan int)  {
+//处理高优先级的超时情况
+func ForwardData()  {
 	count := 0
 	var res Model.Res
+	tempkey := make([]string,0)
 	for {
 		select {
-		case <-send:
+		case <- Global.Forwardingsignal:
 			//到时间转发,生成response
 			fmt.Println("count: ",count,"Global Count:",Global.Count)
 			res.Result = "success"
 			resp := Parser.CreateRes(res)
 			Forwarding(Global.Conns,resp)
 			count = 0
-			//TODO
-			//清空reqchan（考虑是否需要清空）
-		Loop1:
-			for {
-				select {
-				case <-reqchan:
-					fmt.Println("clear reqchan")
-				default:
-					break Loop1
-				}
-			}
+
 			//转发计时器重新计时，转发内容重置
 			res.Content = nil
-			c <- 1
-		case data := <-reqchan:
+			Global.Forwardtimer <- 1
+			//使用缓冲区，发送信号从缓冲区中读取数据
+			for _,v := range tempkey {
+				Global.PlayersChannel[v] <- 1
+			}
+			tempkey = nil
+		case data := <- Global.AllDataSlice:
+			//fmt.Println(1,count)
+			tempkey = append(tempkey, data.RemoteAddr)
+			//fmt.Println(len(tempkey))
 			count++
 			fmt.Println(count,"count")
 			//组装转发内容体
 			res.Content = append(res.Content, Model.Cnt{UserID:data.UserId,Opinions:data.Request.Opinions})
 			//获取5个数据包时，直接转发，并重置计时器，转发结束重置转发内容体
-			if count == 5 {
+			if count == Global.PlayerNum {
 				res.Result = "success"
 				resp := Parser.CreateRes(res)
 				Forwarding(Global.Conns,resp)
 				count = 0
-				c <- 1
+				Global.Forwardtimer <- 1
 				res.Content = nil
+				//使用缓冲区，发送信号从缓冲区中读取数据
+				for _,v := range tempkey {
+					Global.PlayersChannel[v] <- 1
+				}
+				tempkey = nil
 			}
+			Global.Forwardtimer <- 1
 		}
 	}
 }
@@ -71,19 +77,20 @@ func Forwarding(conns map[*bufio.ReadWriter]string, resp string) {
 }
 //服务端转发消息的计时器
 //c是计时器使用的计时channel, send是转发时的signal channel
-func ForwardingTimer(c chan int,send chan int) {
-	timer := time.Duration(20*time.Millisecond)
+func ForwardingTimer() {
+	timer := time.Duration(50*time.Millisecond)
 	t := time.NewTimer(timer)
 
 	defer t.Stop()
 
 	for true {
 		select {
-		case <-c:
-			t.Reset(20*time.Millisecond)
+		case <- Global.Forwardtimer:
+			//fmt.Println("reset")
+			t.Reset(timer)
 		case <-t.C:
 			fmt.Println("Timeout, Forwarding!")
-			send <- 1
+			Global.Forwardingsignal <- 1
 		}
 	}
 }
