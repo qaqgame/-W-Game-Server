@@ -14,9 +14,9 @@ type Opinion struct {
 }
 
 type HashValue struct {
-	Player1Hash    string      `json:"player1-hash"`
-	Player2Hash    string      `json:"player2-hash"`
-	Player3Hash    string      `json:"player3-hash"`
-	Player4Hash    string      `json:"player4-hash"`
-	Player5Hash    string      `json:"player5-hash"`
+	Player1Hash    string      `json:"player1Hash"`
+	Player2Hash    string      `json:"player2Hash"`
+	Player3Hash    string      `json:"player3Hash"`
+	Player4Hash    string      `json:"player4Hash"`
+	Player5Hash    string      `json:"player5Hash"`
 }

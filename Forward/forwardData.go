@@ -78,7 +78,7 @@ func Forwarding(conns map[*bufio.ReadWriter]string, resp string) {
 //服务端转发消息的计时器
 //c是计时器使用的计时channel, send是转发时的signal channel
 func ForwardingTimer() {
-	timer := time.Duration(50*time.Millisecond)
+	timer := time.Duration(15*time.Millisecond)
 	t := time.NewTimer(timer)
 
 	defer t.Stop()
