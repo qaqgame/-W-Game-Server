@@ -17,6 +17,9 @@ func ForwardData()  {
 	for {
 		select {
 		case <- Global.Forwardingsignal:
+			if Global.ConnCount == 0 {
+				continue
+			}
 			//到时间转发,生成response
 			fmt.Println("count: ",count,"Global Count:",Global.Count)
 			res.Result = "success"
@@ -41,7 +44,7 @@ func ForwardData()  {
 			//组装转发内容体
 			res.Content = append(res.Content, Model.Cnt{UserID:data.UserId,Opinions:data.Request.Opinions})
 			//获取5个数据包时，直接转发，并重置计时器，转发结束重置转发内容体
-			if count == Global.PlayerNum {
+			if count == Global.ConnCount {
 				res.Result = "success"
 				resp := Parser.CreateRes(res)
 				Forwarding(Global.Conns,resp)
@@ -62,6 +65,9 @@ func ForwardData()  {
 //转发response
 func Forwarding(conns map[*bufio.ReadWriter]string, resp string) {
 	fmt.Println("forwarding")
+	if Global.ConnCount == 0 {
+		return
+	}
 	fmt.Println(resp)
 	for rw,_ := range conns {
 		//获取每个conn，向每个conn转发

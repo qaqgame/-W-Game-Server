@@ -83,7 +83,7 @@ func handleConn(conn net.Conn,rw *bufio.ReadWriter,timerChan chan int)  {
 
 	for true {
 		//处理粘包，并读取数据
-		result = ReadFromBuffer(databuf,msgbuf,length,ulength,rw)
+		result = ReadFromBuffer(databuf,msgbuf,&length,ulength,rw)
 		//重置计时器
 		timerChan <- 1
 		//处理从缓冲区读取的内容为nil的情况
@@ -97,13 +97,14 @@ func handleConn(conn net.Conn,rw *bufio.ReadWriter,timerChan chan int)  {
 			continue
 		}
 		if string(result[0]) == "conn close" {
+			Global.ConnCount--
 			cancle()
 			break
 		}
-
 		//处理正常游戏内容数据包
 		//解析json数据
 		for _,v := range result {
+			//fmt.Println("value",v)
 			req := Parser.ParserReq(v)
 			//重新组装新格式
 			var reqex Model.ReqEx
@@ -210,11 +211,12 @@ func Timer(conn net.Conn,timerChan chan int,rw *bufio.ReadWriter) {
 
 }
 
-func ReadFromBuffer(databuf []byte,msgbuf *bytes.Buffer,length int, ulength uint32, rw *bufio.ReadWriter) [][]byte {
+func ReadFromBuffer(databuf []byte,msgbuf *bytes.Buffer,length *int, ulength uint32, rw *bufio.ReadWriter) [][]byte {
 	var result []byte
 	result = nil
 	var ans [][]byte = nil
 	//从reader中读取数据
+	//fmt.Println("NEXT",msgbuf.Len())
 	for true {
 		n,err := rw.Read(databuf)
 		if err != nil && err != io.EOF {
@@ -235,27 +237,30 @@ func ReadFromBuffer(databuf []byte,msgbuf *bytes.Buffer,length int, ulength uint
 		result = append(result,databuf[:n]...)
 	}
 	Global.Count++
+	//fmt.Println(string(result))
 	_,err := msgbuf.Write(result)
 	if err != nil {
 		fmt.Println("Buffer write error: ",err)
 	}
 	//处理粘包
 	for true {
-		if length == 0 && msgbuf.Len() >= 4 {
+		if *length == 0 && msgbuf.Len() >= 4 {
 			binary.Read(msgbuf,binary.LittleEndian,&ulength)
-			length = int(ulength)
-
-			if length > 10240 {
+			*length = int(ulength)
+			//fmt.Println("length:",length,msgbuf.Len())
+			if *length > 10240 {
+				//fmt.Println("string:",string(result))
 				fmt.Printf("Message too length: %d\n", length)
 			}
 		}
-		if length > 0 && msgbuf.Len() >= length {
-			result = msgbuf.Next(length)
+		if *length > 0 && msgbuf.Len() >= *length {
+			result = msgbuf.Next(*length)
 			ans = append(ans, result)
 			//fmt.Println(string(result), msgbuf.Len())
 			//msgbuf.Reset()
-			length = 0
+			*length = 0
 		} else {
+			//fmt.Println("break")
 			//fmt.Println("not full data: ",string(result))
 			break
 		}
