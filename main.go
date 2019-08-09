@@ -15,19 +15,27 @@ import (
 	"wGame/Buffer"
 	"sync"
 	"context"
+	"wGame/Log"
 )
 
+func init() {
+	go Log.LogController()
+}
 
 func main() {
 	Global.Count = 0                      //测试时使用的临时数据
 	service := ":8080"
 	tcpAddr,err:= net.ResolveTCPAddr("tcp4",service)
 	if err != nil {
-		fmt.Println("Resolve tcp error:",err)
+		//fmt.Println("Resolve tcp error:",err)
+		loginfo := Log.GetTransferInfo()
+		Global.DebugLogger <- loginfo + err.Error()
 	}
 	listener, err := net.ListenTCP("tcp",tcpAddr)
 	if err != nil {
-		fmt.Println("ListenTcp Error:", err)
+		//fmt.Println("ListenTcp Error:", err)
+		loginfo := Log.GetTransferInfo()
+		Global.DebugLogger <- loginfo + err.Error()
 	}
 	defer listener.Close()
 	//根据连接数，判断开启转发计时器和转发器。都连接上时开始GAME
@@ -39,7 +47,6 @@ func main() {
 		//类型转换，conn转换为ReadWriter类型
 		rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 		//将rw加入到全局变量Global.Conns中存储
-		//Global.Conns = append(Global.Conns, rw)
 		Global.Conns[rw] = conn.RemoteAddr().String()
 		fmt.Println(len(Global.Conns),"111rewr")
 		//统计已有的连接数
@@ -47,7 +54,9 @@ func main() {
 		Global.ConnEstablish <- Global.ConnCount
 
 		if err != nil {
-			fmt.Println(err)
+			//fmt.Println(err)
+			loginfo := Log.GetTransferInfo()
+			Global.DebugLogger <- loginfo + err.Error()
 		}
 		timerChan := make(chan int,1)
 		//开启计时器和连接处理进程
@@ -61,6 +70,7 @@ func handleConn(conn net.Conn,rw *bufio.ReadWriter,timerChan chan int)  {
 	fmt.Println("handleConn")
 	cxt := context.Background()
 	cxt,cancle := context.WithCancel(cxt)
+	defer cancle()
 	//生成buffer队列top改变消息通知channel
 	bufferchange     := make(chan *Buffer.Node,1)
 	bufferchangeBack := make(chan *Buffer.Node,1)
@@ -79,7 +89,7 @@ func handleConn(conn net.Conn,rw *bufio.ReadWriter,timerChan chan int)  {
 	length  := 0
 	ulength := uint32(0)
 
-	go ReadFromBufferQueue(remoteAddr,top,size,bufferchange,bufferchangeBack,mutex)
+	go ReadFromBufferQueue(cxt,remoteAddr,top,size,bufferchange,bufferchangeBack,mutex)
 
 	for true {
 		//处理粘包，并读取数据
@@ -96,9 +106,14 @@ func handleConn(conn net.Conn,rw *bufio.ReadWriter,timerChan chan int)  {
 			fmt.Println("heart beats")
 			continue
 		}
+		//重新连接的情况处理
+		//TODO
+
+		//
 		if string(result[0]) == "conn close" {
 			Global.ConnCount--
-			cancle()
+			//delete(Global.PlayersChannel,remoteAddr)
+			//cancle()
 			break
 		}
 		//处理正常游戏内容数据包
@@ -126,19 +141,21 @@ func handleConn(conn net.Conn,rw *bufio.ReadWriter,timerChan chan int)  {
 				bufferchange <- temp[0]
 			}
 		}
-
 	}
 }
 
 //从缓冲区读取，与conn读取并行执行
-func ReadFromBufferQueue(remoteaddr string,top *Buffer.Node,size *int,bufferchange chan *Buffer.Node,bufferchangeBack chan *Buffer.Node,mutex *sync.Mutex) {
+func ReadFromBufferQueue(cxt context.Context,remoteaddr string,top *Buffer.Node,size *int,bufferchange chan *Buffer.Node,bufferchangeBack chan *Buffer.Node,mutex *sync.Mutex) {
 	for true {
 		select {
 		case <- Global.PlayersChannel[remoteaddr]:
 			//fmt.Println("open")
 		LOOP:
 			for true {
+				//退出线程
 				select {
+				case <-cxt.Done():
+					return
 				case data := <-bufferchange:
 					top = data
 					temp := Buffer.PopFromQueue(top,size,mutex)
@@ -156,6 +173,8 @@ func ReadFromBufferQueue(remoteaddr string,top *Buffer.Node,size *int,bufferchan
 					}
 				default:
 					select {
+					case <-cxt.Done():
+						return
 					case data := <- bufferchange:
 						top = data
 						temp := Buffer.PopFromQueue(top,size,mutex)
@@ -184,7 +203,6 @@ func ReadFromBufferQueue(remoteaddr string,top *Buffer.Node,size *int,bufferchan
 					}
 				}
 			}
-			//fmt.Println("over")
 		}
 	}
 }
@@ -220,7 +238,9 @@ func ReadFromBuffer(databuf []byte,msgbuf *bytes.Buffer,length *int, ulength uin
 	for true {
 		n,err := rw.Read(databuf)
 		if err != nil && err != io.EOF {
-			fmt.Println("Error:",err)
+			//fmt.Println("Error:",err)
+			loginfo := Log.GetTransferInfo()
+			Global.DebugLogger <- loginfo + err.Error()
 			if err.Error() == "read tcp 127.0.0.1:8080->"+Global.Conns[rw]+": wsarecv: An existing connection was forcibly closed by the remote host." {
 				fmt.Println("Conn closed")
 				delete(Global.Conns,rw)
@@ -240,7 +260,9 @@ func ReadFromBuffer(databuf []byte,msgbuf *bytes.Buffer,length *int, ulength uin
 	//fmt.Println(string(result))
 	_,err := msgbuf.Write(result)
 	if err != nil {
-		fmt.Println("Buffer write error: ",err)
+		//fmt.Println("Buffer write error: ",err)
+		loginfo := Log.GetTransferInfo()
+		Global.DebugLogger <- loginfo + err.Error()
 	}
 	//处理粘包
 	for true {

@@ -2,7 +2,7 @@ package Forward
 
 import (
 	"wGame/Global"
-	"fmt"
+	"wGame/Log"
 )
 
 func StartGame() {
@@ -21,11 +21,13 @@ LOOP:
 				for rw,_ := range Global.Conns {
 					_,err := rw.Write([]byte("all player connected"))
 					if err != nil {
-						fmt.Println("Error:",err)
+						loginfo := Log.GetTransferInfo()
+						Global.DebugLogger <- loginfo + err.Error()
 					}
 					err = rw.Flush()
 					if err != nil {
-						fmt.Println(err)
+						loginfo := Log.GetTransferInfo()
+						Global.DebugLogger <- loginfo + err.Error()
 					}
 				}
 				go ForwardData()

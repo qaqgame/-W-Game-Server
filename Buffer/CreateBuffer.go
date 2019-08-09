@@ -3,7 +3,6 @@ package Buffer
 import (
 	"wGame/Model"
 	"sync"
-	"fmt"
 )
 
 type Node struct {
@@ -42,9 +41,9 @@ func PushIntoQueue(reqex Model.ReqEx,top *Node, tail *Node, size *int,mutex *syn
 			mutex.Unlock()
 		}
 	}
-	if top == nil {
-		fmt.Println("ffffffffffffnil")
-	}
+	//if top == nil {
+	//	fmt.Println("ffffffffffffnil")
+	//}
 	//fmt.Println("top:",top.Value)
 	//fmt.Println("tail:",tail.Value)
 	//fmt.Println("size:",*size)

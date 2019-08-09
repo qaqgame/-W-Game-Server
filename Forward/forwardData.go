@@ -7,6 +7,7 @@ import (
 	"wGame/Parser"
 	"wGame/Global"
 	"bufio"
+	"wGame/Log"
 )
 //获取request，构造response
 //处理高优先级的超时情况
@@ -73,18 +74,20 @@ func Forwarding(conns map[*bufio.ReadWriter]string, resp string) {
 		//获取每个conn，向每个conn转发
 		_,err := rw.Write([]byte(resp))
 		if err != nil {
-			fmt.Println(err)
+			loginfo := Log.GetTransferInfo()
+			Global.DebugLogger <- loginfo + err.Error()
 		}
 		err = rw.Flush()
 		if err != nil {
-			fmt.Println(err)
+			loginfo := Log.GetTransferInfo()
+			Global.DebugLogger <- loginfo + err.Error()
 		}
 	}
 }
 //服务端转发消息的计时器
 //c是计时器使用的计时channel, send是转发时的signal channel
 func ForwardingTimer() {
-	timer := time.Duration(15*time.Millisecond)
+	timer := time.Duration(10*time.Millisecond)
 	t := time.NewTimer(timer)
 
 	defer t.Stop()

@@ -15,7 +15,10 @@ var (
 	Count              int64                          //测试使用数据，记录发送的数据包次数
 	PlayerNum          int                            //需要连接上的玩家数
 	PlayersChannel     map[string]chan int            //每个玩家独自的channel
+	DebugLogger        chan string                    //输出到log文件的Logger channel
 )
+
+const LogFileName = "LogFile.log"
 
 func init() {
 	AllDataSlice     = make(chan Model.ReqEx, 5)
@@ -26,4 +29,5 @@ func init() {
 	ConnEstablish    = make(chan int, 1)
 	PlayerNum        = 5
 	PlayersChannel   = make(map[string]chan int, 5)
+	DebugLogger      = make(chan string, 10)
 }
