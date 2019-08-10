@@ -3,6 +3,7 @@ package Forward
 import (
 	"wGame/Global"
 	"wGame/Log"
+	"bufio"
 )
 
 func StartGame() {
@@ -18,7 +19,8 @@ LOOP:
 			//！！！
 			if c == Global.PlayerNum {
 				//所有人连接上，开启转发计时器和转发器
-				for rw,_ := range Global.Conns {
+				for _,v := range Global.Conn {
+					rw := bufio.NewReadWriter(bufio.NewReader(v),bufio.NewWriter(v))
 					_,err := rw.Write([]byte("all player connected"))
 					if err != nil {
 						loginfo := Log.GetTransferInfo()
@@ -36,4 +38,5 @@ LOOP:
 			}
 		}
 	}
+	return
 }
