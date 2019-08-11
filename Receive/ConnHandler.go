@@ -11,17 +11,19 @@ import (
 
 func ConnHandler(conn net.Conn, timerChan chan int) {
 	fmt.Println("handleConn")
+	//控制子进程退出
 	cxt := context.Background()
 	cxt,cancle := context.WithCancel(cxt)
 	defer cancle()
+
 	//控制连接的锁
 	//生成buffer队列top改变消息通知channel
 	//向ReadFromBufferQueue进程发送队列目前head指针信息
-	bufferchange     := make(chan *Buffer.Node,2)
+	bufferchange     := make(chan *Buffer.ConnBuffer,2)
 	//ReadFormBufferQueue进程向本进程发送队列目前的head指针
-	bufferchangeBack := make(chan *Buffer.Node,1)
+	bufferchangeBack := make(chan *Buffer.ConnBuffer,1)
 
-	top,tail,size,mutex := Buffer.InitQueue()
+	connbuffer := Buffer.InitQueue()
 	//生成独自的channel,发送从缓冲区中读取下一条信息的signal
 	MyChannel := make(chan int, 1)
 	remoteAddr := conn.RemoteAddr().String()
@@ -35,7 +37,7 @@ func ConnHandler(conn net.Conn, timerChan chan int) {
 	length  := 0
 	ulength := uint32(0)
 
-	go ReadFromBufferQueue(cxt,remoteAddr,top,size,bufferchange,bufferchangeBack,mutex)
+	go ReadFromBufferQueue(cxt,remoteAddr,connbuffer,bufferchange,bufferchangeBack)
 
 	for true {
 		//处理粘包，并读取数据
@@ -57,57 +59,35 @@ func ConnHandler(conn net.Conn, timerChan chan int) {
 
 		//
 		if string(result[0]) == "conn close" {
-			//connMutex.Lock()
 			conn.Close()
+
 			Global.Connstruct.RWlock.Lock()
 			Global.Connstruct.ConnCount--
 			delete(Global.Connstruct.Conn,remoteAddr)
 			delete(Global.Connstruct.PlayersChannel,remoteAddr)
-			//Global.ConnCount--
-			//delete(Global.Conn,remoteAddr)
-			//delete(Global.PlayersChannel,remoteAddr)
 			Global.Connstruct.RWlock.Unlock()
+
 			return
 		}
 		//处理正常游戏内容数据包
 		//解析json数据
 		for _,v := range result {
 			//fmt.Println("value",string(v))
-			//
 
-			//req := Parser.ParserReq(v)
-			//if req == nil {
-			//	break
-			//}
-			////重新组装新格式
-			//var reqex Model.ReqEx
-			//reqex.Request    = *req
-			//reqex.UserId     = req.UserID
-			//reqex.RemoteAddr = remoteAddr
-
-			//
 			//读取的内容插入缓冲区队列中
 			//head := Buffer.PushIntoQueue(reqex)
 			select {
 			case data := <-bufferchangeBack:
-				top = data
-				temp := Buffer.PushIntoQueue(v,top,tail,size,mutex)
-				//if *size == 100 {
-				//	fmt.Println("buffer full")
-				//}
-				if temp[0] != top {
-					bufferchange <- temp[0]
-				}
-				tail = temp[1]
+				connbuffer = data
+				//temp := connbuffer.Top
+				connbuffer = Buffer.PushIntoQueue(v,connbuffer)
+
+				bufferchange <- connbuffer
 			default:
-				temp := Buffer.PushIntoQueue(v,top,tail,size,mutex)
-				//if *size == 100 {
-				//	fmt.Println("buffer full")
-				//}
-				if temp[0] != top {
-					bufferchange <- temp[0]
-				}
-				tail = temp[1]
+				//temp := connbuffer.Top
+				connbuffer = Buffer.PushIntoQueue(v,connbuffer)
+
+				bufferchange <- connbuffer
 			}
 		}
 	}

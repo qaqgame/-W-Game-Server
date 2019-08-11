@@ -2,13 +2,17 @@ package Receive
 
 import (
 	"wGame/Buffer"
-	"sync"
 	"context"
 	"wGame/Global"
 	"time"
+	"fmt"
 )
 
-func ReadFromBufferQueue(cxt context.Context, remoteaddr string, top *Buffer.Node, size *int, bufferchange chan *Buffer.Node, bufferchangeBack chan *Buffer.Node, mutex *sync.Mutex) {
+func ReadFromBufferQueue(cxt context.Context, remoteaddr string,connbuffer *Buffer.ConnBuffer, bufferchange chan *Buffer.ConnBuffer, bufferchangeBack chan *Buffer.ConnBuffer) {
+	var temp *Buffer.Node = nil
+	if connbuffer == nil {
+		fmt.Println("oooo")
+	}
 	for true {
 		select {
 		case <- Global.Connstruct.PlayersChannel[remoteaddr]:
@@ -23,11 +27,13 @@ func ReadFromBufferQueue(cxt context.Context, remoteaddr string, top *Buffer.Nod
 					case <-cxt.Done():
 						return
 					case data := <-bufferchange:
-						top = data
-						temp := Buffer.PopFromQueue(top,size,mutex)
+						//fmt.Println("get")
+						temp = nil
+						connbuffer = data
+						temp,connbuffer = Buffer.PopFromQueue(connbuffer)
 						if temp != nil {
-							bufferchangeBack <- temp[1]
-							value := Buffer.ParserBufferQueue(temp[0].Cnt,remoteaddr)
+							bufferchangeBack <- connbuffer
+							value := Buffer.ParserBufferQueue(temp.Cnt,remoteaddr)
 							if value == nil {
 								continue LOOP
 							}
@@ -38,10 +44,13 @@ func ReadFromBufferQueue(cxt context.Context, remoteaddr string, top *Buffer.Nod
 							continue LOOP
 						}
 					default:
-						temp := Buffer.PopFromQueue(top,size,mutex)
+						//fmt.Println("get2",connbuffer)
+						temp = nil
+
+						temp, connbuffer = Buffer.PopFromQueue(connbuffer)
 						if temp != nil {
-							bufferchangeBack <- temp[1]
-							value := Buffer.ParserBufferQueue(temp[0].Cnt,remoteaddr)
+							bufferchangeBack <- connbuffer
+							value := Buffer.ParserBufferQueue(temp.Cnt,remoteaddr)
 							if value == nil {
 								continue LOOP
 							}
