@@ -11,7 +11,7 @@ import (
 func ReadFromBufferQueue(cxt context.Context, remoteaddr string, top *Buffer.Node, size *int, bufferchange chan *Buffer.Node, bufferchangeBack chan *Buffer.Node, mutex *sync.Mutex) {
 	for true {
 		select {
-		case <- Global.PlayersChannel[remoteaddr]:
+		case <- Global.Connstruct.PlayersChannel[remoteaddr]:
 		LOOP:
 			for true {
 				//退出线程
@@ -27,7 +27,11 @@ func ReadFromBufferQueue(cxt context.Context, remoteaddr string, top *Buffer.Nod
 						temp := Buffer.PopFromQueue(top,size,mutex)
 						if temp != nil {
 							bufferchangeBack <- temp[1]
-							Global.AllDataSlice <- temp[0].Value
+							value := Buffer.ParserBufferQueue(temp[0].Cnt,remoteaddr)
+							if value == nil {
+								continue LOOP
+							}
+							Global.AllDataSlice <- *value
 							break LOOP
 						}else {
 							time.Sleep(5*time.Millisecond)
@@ -37,7 +41,11 @@ func ReadFromBufferQueue(cxt context.Context, remoteaddr string, top *Buffer.Nod
 						temp := Buffer.PopFromQueue(top,size,mutex)
 						if temp != nil {
 							bufferchangeBack <- temp[1]
-							Global.AllDataSlice <- temp[0].Value
+							value := Buffer.ParserBufferQueue(temp[0].Cnt,remoteaddr)
+							if value == nil {
+								continue LOOP
+							}
+							Global.AllDataSlice <- *value
 							break LOOP
 						}else {
 							time.Sleep(5*time.Millisecond)

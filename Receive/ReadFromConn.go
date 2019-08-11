@@ -2,7 +2,6 @@ package Receive
 
 import (
 	"bytes"
-	"wGame/Log"
 	"wGame/Global"
 	"encoding/binary"
 	"fmt"
@@ -11,40 +10,53 @@ import (
 )
 
 func ReadFromConn(databuf []byte, msgbuf *bytes.Buffer, length *int, ulength uint32, conn net.Conn) [][]byte {
-	var result []byte
-	result = nil
+	var result []byte = nil
 	var ans [][]byte = nil
 	remoteaddr := conn.RemoteAddr().String()
 	localaddrlen := len(conn.LocalAddr().String())
 	//从reader中读取数据
-	for true {
-		n,err := conn.Read(databuf)
-		if err != nil && err != io.EOF {
-			fmt.Println("Error:",err)
-			if err.Error()[13+localaddrlen+len(remoteaddr):] == "wsarecv: An existing connection was forcibly closed by the remote host." ||
-				err.Error()[13+localaddrlen+len(remoteaddr):] == "read: connection reset by peer"{
-					fmt.Println("Conn closed")
-					//delete(Global.Conns,rw)
-					// delete(Global.Conn,remoteaddr)
-					return [][]byte{[]byte("conn close")}
-			}
+	n,err := conn.Read(databuf)
+	if err != nil && err != io.EOF {
+		fmt.Println("Error:",err)
+		if err.Error()[13+localaddrlen+len(remoteaddr):] == "wsarecv: An existing connection was forcibly closed by the remote host." ||
+			err.Error()[13+localaddrlen+len(remoteaddr):] == "read: connection reset by peer"{
+			fmt.Println("Conn closed")
+			//delete(Global.Conns,rw)
+			// delete(Global.Conn,remoteaddr)
+			return [][]byte{[]byte("conn close")}
 		}
-		if err != io.EOF{
-			result = append(result,databuf[:n]...)
-			break
-		}
-		if n == 0 {
-			break
-		}
-		result = append(result,databuf[:n]...)
 	}
+	result = append(result,databuf[:n]...)
+
+	//for true {
+	//	n,err := conn.Read(databuf)
+	//	if err != nil && err != io.EOF {
+	//		fmt.Println("Error:",err)
+	//		if err.Error()[13+localaddrlen+len(remoteaddr):] == "wsarecv: An existing connection was forcibly closed by the remote host." ||
+	//			err.Error()[13+localaddrlen+len(remoteaddr):] == "read: connection reset by peer"{
+	//				fmt.Println("Conn closed")
+	//				//delete(Global.Conns,rw)
+	//				// delete(Global.Conn,remoteaddr)
+	//				return [][]byte{[]byte("conn close")}
+	//		}
+	//	}
+	//	if err != io.EOF{
+	//		result = append(result,databuf[:n]...)
+	//		break
+	//	}
+	//	if n == 0 {
+	//		break
+	//	}
+	//	result = append(result,databuf[:n]...)
+	//}
 	//Global.Count++
 	//fmt.Println(result)
-	_,err := msgbuf.Write(result)
+
+	_,err = msgbuf.Write(result)
 	if err != nil {
-		//fmt.Println("Buffer write error: ",err)
-		loginfo := Log.GetTransferInfo()
-		Global.DebugLogger <- loginfo + err.Error()
+		fmt.Println("Buffer write error: ",err)
+		//loginfo := Log.GetTransferInfo()
+		//Global.DebugLogger <- loginfo + err.Error()
 	}
 	//处理粘包
 	for true {
@@ -65,5 +77,6 @@ func ReadFromConn(databuf []byte, msgbuf *bytes.Buffer, length *int, ulength uin
 	}
 	//返回最终结果,nil or result
 	Global.Count = Global.Count + len(ans)
+	//fmt.Println(ans)
 	return ans
 }

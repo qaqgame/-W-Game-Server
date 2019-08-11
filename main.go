@@ -6,28 +6,27 @@ import (
 	"time"
 	"wGame/Global"
 	"wGame/Forward"
-	"wGame/Log"
 	"wGame/Receive"
 )
 
-func init() {
-	go Log.LogController()
-}
+//func init() {
+//	go Log.LogController()
+//}
 
 func main() {
 	Global.Count = 0                      //测试时使用的临时数据,统计接收了多少数据
 	service := ":8080"
 	tcpAddr,err:= net.ResolveTCPAddr("tcp4",service)
 	if err != nil {
-		//fmt.Println("Resolve tcp error:",err)
-		loginfo := Log.GetTransferInfo()
-		Global.DebugLogger <- loginfo + err.Error()
+		fmt.Println("Resolve tcp error:",err)
+		//loginfo := Log.GetTransferInfo()
+		//Global.DebugLogger <- loginfo + err.Error()
 	}
 	listener, err := net.ListenTCP("tcp",tcpAddr)
 	if err != nil {
-		//fmt.Println("ListenTcp Error:", err)
-		loginfo := Log.GetTransferInfo()
-		Global.DebugLogger <- loginfo + err.Error()
+		fmt.Println("ListenTcp Error:", err)
+		//loginfo := Log.GetTransferInfo()
+		//Global.DebugLogger <- loginfo + err.Error()
 	}
 	defer listener.Close()
 
@@ -45,11 +44,13 @@ func main() {
 			//Global.DebugLogger <- loginfo + err.Error()
 		}
 
-		Global.Conn[conn.RemoteAddr().String()] = conn
-		fmt.Println(len(Global.Conn),"111rewr")
+		Global.Connstruct.RWlock.Lock()
+		Global.Connstruct.Conn[conn.RemoteAddr().String()] = conn
+		//fmt.Println(len(Global.Connstruct.Conn),"111rewr")
 		//统计已有的连接数，将连接数传入channel,根据连接数判断游戏开始时间---start.go进程
-		Global.ConnCount++
-		Global.ConnEstablish <- Global.ConnCount
+		Global.Connstruct.ConnCount++
+		Global.Connstruct.RWlock.Unlock()
+		Global.ConnEstablish <- Global.Connstruct.ConnCount
 
 		//连接是否超时计时器channel
 		timerChan := make(chan int,1)
@@ -61,19 +62,19 @@ func main() {
 
 //计时器函数，保持长连接，并判断掉线状态
 func Timer(conn net.Conn,timerChan chan int) {
-	timer := time.Duration(3*time.Second)
+	timer := time.Duration(10*time.Second)
 	t := time.NewTimer(timer)
 
 	defer t.Stop()
 	for true {
 		select {
 		case <-timerChan:
-			t.Reset(3*time.Second)
+			t.Reset(10*time.Second)
 		case <-t.C:
 			fmt.Println("OUTLINE")
 			conn.Close()    //关闭连接
 			//删除连接
-			delete(Global.Conn,conn.RemoteAddr().String())
+			delete(Global.Connstruct.Conn,conn.RemoteAddr().String())
 			return
 			//
 		}

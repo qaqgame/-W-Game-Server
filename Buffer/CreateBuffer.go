@@ -1,12 +1,13 @@
 package Buffer
 
 import (
-	"wGame/Model"
 	"sync"
+	"wGame/Model"
+	"wGame/Parser"
 )
 
 type Node struct {
-	Value    Model.ReqEx
+	Cnt      []byte
 	Next     *Node
 }
 
@@ -20,11 +21,12 @@ func InitQueue() (*Node,*Node,*int,*sync.Mutex) {
 	return top,tail,&size,&mutex
 }
 
-func PushIntoQueue(reqex Model.ReqEx,top *Node, tail *Node, size *int,mutex *sync.Mutex) []*Node {
+func PushIntoQueue(cnt []byte,top *Node, tail *Node, size *int,mutex *sync.Mutex) []*Node {
 	//if top == nil {
 	//	fmt.Println("top is nil")
 	//}
-	node := Node{reqex,nil}
+	value := cnt
+	node := Node{value,nil}
 	mutex.Lock()
 	defer mutex.Unlock()
 	if *size <= length {
@@ -51,4 +53,18 @@ func PopFromQueue(top *Node,size *int,mutex *sync.Mutex) []*Node {
 		return []*Node{temp,top}
 	}
 	return nil
+}
+
+func ParserBufferQueue(cnt []byte,remoteAddr string) *Model.ReqEx {
+	req := Parser.ParserReq(cnt)
+	if req == nil {
+		return nil
+	}
+	//重新组装新格式
+	var reqex Model.ReqEx
+	reqex.Request    = *req
+	reqex.UserId     = req.UserID
+	reqex.RemoteAddr = remoteAddr
+
+	return &reqex
 }

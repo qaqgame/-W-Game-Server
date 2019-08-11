@@ -18,39 +18,41 @@ func ForwardData()  {
 	for {
 		select {
 		case <- Global.Forwardingsignal:
-			if Global.ConnCount == 0 {
+			//Global.Connstruct.RWlock.RLock()
+			if Global.Connstruct.ConnCount == 0 {
+				//Global.Connstruct.RWlock.RUnlock()
 				continue
-			}
-			//到时间转发,生成response
-			fmt.Println("count: ",count,"Global Count:",Global.Count)
-			res.Result = "success"
-			resp := Parser.CreateRes(res)
-			if resp == "" {
-				count = 0
-				Global.Forwardingsignal <- 1
-				continue
-			}
-			Forwarding(Global.Conn,resp)
-			//使用缓冲区，发送信号从缓冲区中读取数据
-			for _,v := range tempkey {
-				if _,ok:= Global.PlayersChannel[v];ok {
-					Global.PlayersChannel[v] <- 1
+			} else {
+				res.Result = "success"
+				resp := Parser.CreateRes(res)
+				if resp == "" {
+					count = 0
+					Global.Forwardingsignal <- 1
+					continue
 				}
+				Forwarding(Global.Connstruct.Conn,resp)
+				//使用缓冲区，发送信号从缓冲区中读取数据
+				for _,v := range tempkey {
+					if _,ok:= Global.Connstruct.PlayersChannel[v];ok {
+						Global.Connstruct.PlayersChannel[v] <- 1
+					}
+				}
+				tempkey = nil
+				count = 0
+				//转发计时器重新计时，转发内容重置
+				res.Content = nil
+				Global.Forwardtimer <- 1
 			}
-			tempkey = nil
-			count = 0
-			//转发计时器重新计时，转发内容重置
-			res.Content = nil
-			Global.Forwardtimer <- 1
+
 		case data := <- Global.AllDataSlice:
 			tempkey = append(tempkey, data.RemoteAddr)
 			count++
-			fmt.Println(count,"count")
-			//fmt.Println(data)
 			//组装转发内容体
 			res.Content = append(res.Content, Model.Cnt{UserID:data.UserId,Opinions:data.Request.Opinions})
 			//获取5个数据包时，直接转发，并重置计时器，转发结束重置转发内容体
-			if count == Global.ConnCount {
+			//Global.Connstruct.RWlock.RLock()
+			if count == Global.Connstruct.ConnCount {
+				//Global.Connstruct.RWlock.RUnlock()
 				res.Result = "success"
 				resp := Parser.CreateRes(res)
 				if resp == "" {
@@ -58,29 +60,33 @@ func ForwardData()  {
 					count = 0
 					continue
 				}
-				Forwarding(Global.Conn,resp)
+				Forwarding(Global.Connstruct.Conn,resp)
 				res.Content = nil
 				count = 0
 				//使用缓冲区，发送信号从缓冲区中读取数据
 				for _,v := range tempkey {
-					if _,ok:= Global.PlayersChannel[v];ok {
-						Global.PlayersChannel[v] <- 1
+					if _,ok:= Global.Connstruct.PlayersChannel[v];ok {
+						Global.Connstruct.PlayersChannel[v] <- 1
 					}
 				}
 				tempkey = nil
+				Global.Forwardtimer <- 1
+			} else {
+				//Global.Connstruct.RWlock.RUnlock()
+				Global.Forwardtimer <- 1
 			}
-			Global.Forwardtimer <- 1
 		}
 	}
 }
 
 //转发response
 func Forwarding(conn map[string]net.Conn, resp string) {
-	fmt.Println("forwarding")
-	if Global.ConnCount == 0 {
+	//Global.Connstruct.RWlock.RLock()
+	if Global.Connstruct.ConnCount == 0 {
+		//Global.Connstruct.RWlock.RUnlock()
 		return
 	}
-	fmt.Println(resp)
+	//fmt.Println(resp)
 	for i,v := range conn {
 		//获取每个conn，向每个conn转发
 		if _,ok := conn[i];ok {
@@ -103,7 +109,7 @@ func Forwarding(conn map[string]net.Conn, resp string) {
 //服务端转发消息的计时器
 //c是计时器使用的计时channel, send是转发时的signal channel
 func ForwardingTimer() {
-	timer := time.Duration(15*time.Millisecond)
+	timer := time.Duration(70*time.Millisecond)
 	t := time.NewTimer(timer)
 
 	defer t.Stop()
