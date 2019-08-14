@@ -18,3 +18,14 @@ func ParserReq(data []byte) *Model.Req {
 	}
 	return &request
 }
+
+func ParserReqMini(data []byte) *Model.ReqMini {
+	var reqmini Model.ReqMini
+	err := json.Unmarshal(data,&reqmini)
+	if err != nil {
+		fmt.Println("ParserReqMini Json Error:",err)
+		fmt.Println("json error:",string(data))
+		return nil
+	}
+	return &reqmini
+}

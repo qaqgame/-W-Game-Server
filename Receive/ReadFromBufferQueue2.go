@@ -1,23 +1,24 @@
 package Receive
 
 import (
-	"wGame/Buffer"
 	"context"
-	"wGame/Global"
+	"wGame/Buffer"
 	"fmt"
+	"wGame/Global"
+	"time"
 )
 
-func ReadFromBufferQueue(cxt context.Context, remoteaddr string,connbuffer *Buffer.ConnBuffer, bufferchange chan *Buffer.ConnBuffer, bufferchangeBack chan *Buffer.ConnBuffer) {
+func ReadFromBufferQueue2(cxt context.Context, remoteaddr string, connbuffer2 *Buffer.ConnBuffer, bufferchange2 chan *Buffer.ConnBuffer, bufferchangeBack2 chan *Buffer.ConnBuffer) {
 	var temp *Buffer.Node = nil
-	if connbuffer == nil {
-		fmt.Println("oooo")
+	if connbuffer2 == nil {
+		fmt.Println("11111")
 	}
 	for true {
 		select {
-		case <- Global.Connstruct.PlayersChannel[remoteaddr]:
+		case <-Global.Connstruct.PlayersChannelAck[remoteaddr]:
+			//fmt.Println("reqack")
 		LOOP:
 			for true {
-				//退出线程
 				select {
 				case <-cxt.Done():
 					return
@@ -25,51 +26,39 @@ func ReadFromBufferQueue(cxt context.Context, remoteaddr string,connbuffer *Buff
 					select {
 					case <-cxt.Done():
 						return
-					case data := <-bufferchange:
-						//fmt.Println("get")
-						//fmt.Println("read1")
+					case data := <-bufferchange2:
 						temp = nil
-						connbuffer = data
-						temp,connbuffer = Buffer.PopFromQueue(connbuffer)
-						//if connbuffer.Size > 0 {
-						//	fmt.Println("success > 0")
-						//}
+						connbuffer2 = data
+						temp,connbuffer2 = Buffer.PopFromQueue(connbuffer2)
 						if temp != nil {
-							bufferchangeBack <- connbuffer
+							bufferchangeBack2 <- connbuffer2
 							value := Buffer.ParserBufferQueue(temp.Cnt,remoteaddr)
 							Global.Connstruct.RWlock.RLock()
-							//fmt.Println("value11111:",value,value.RoundNum,Global.Connstruct.RoundNum,value.DataType)
+							//fmt.Println("value22222:",value,value.RoundNum,Global.Connstruct.RoundNum,value.DataType)
 							if value != nil && value.RoundNum == Global.Connstruct.RoundNum {
-								//fmt.Println("112211")
 								Global.Connstruct.RWlock.RUnlock()
-								//fmt.Println("221122")
 								Global.AllDataSlice <- *value
 								break LOOP
 							} else {
 								if value.RoundNum < Global.Connstruct.RoundNum {
 									Global.Connstruct.RWlock.RUnlock()
-									_,connbuffer = Buffer.PopFromQueue(connbuffer)
+									_,connbuffer2 = Buffer.PopFromQueue(connbuffer2)
 									continue LOOP
 								}
 								continue LOOP
 							}
-						}else {
-							//time.Sleep(5*time.Millisecond)
+						} else {
+							time.Sleep(5*time.Millisecond)
 							continue LOOP
 						}
 					default:
-						//fmt.Println("get2",connbuffer)
-						//fmt.Println("read2")
 						temp = nil
-						temp, connbuffer = Buffer.PopFromQueue(connbuffer)
-						//if connbuffer.Size > 0 {
-						//	fmt.Println("success > 0")
-						//}
+						temp, connbuffer2 = Buffer.PopFromQueue(connbuffer2)
 						if temp != nil {
-							bufferchangeBack <- connbuffer
+							bufferchangeBack2 <- connbuffer2
 							value := Buffer.ParserBufferQueue(temp.Cnt,remoteaddr)
 							Global.Connstruct.RWlock.RLock()
-							//fmt.Println("value11111:",value)
+							//fmt.Println("value22222:",value,value.RoundNum,Global.Connstruct.RoundNum,value.DataType)
 							if value != nil && value.RoundNum == Global.Connstruct.RoundNum {
 								Global.Connstruct.RWlock.RUnlock()
 								Global.AllDataSlice <- *value
@@ -77,13 +66,13 @@ func ReadFromBufferQueue(cxt context.Context, remoteaddr string,connbuffer *Buff
 							} else {
 								if value.RoundNum < Global.Connstruct.RoundNum {
 									Global.Connstruct.RWlock.RUnlock()
-									_,connbuffer = Buffer.PopFromQueue(connbuffer)
+									_,connbuffer2 = Buffer.PopFromQueue(connbuffer2)
 									continue LOOP
 								}
 								continue LOOP
 							}
 						}else {
-							//time.Sleep(5*time.Millisecond)
+							time.Sleep(5*time.Millisecond)
 							continue LOOP
 						}
 					}

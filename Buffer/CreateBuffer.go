@@ -8,6 +8,8 @@ import (
 )
 
 type Node struct {
+	RoundNum int64
+	DataType int
 	Cnt      []byte
 	Next     *Node
 }
@@ -17,7 +19,7 @@ type ConnBuffer struct {
 	Top       *Node
 	Tail      *Node
 	Size      int
-	mutex   sync.RWMutex
+	RWmutex   sync.RWMutex
 }
 
 func InitQueue() *ConnBuffer {
@@ -25,42 +27,46 @@ func InitQueue() *ConnBuffer {
 	cb.Top = nil
 	cb.Tail = nil
 	cb.Size = 0
-	cb.mutex = sync.RWMutex{}
+
+	cb.RWmutex = sync.RWMutex{}
 
 	return &cb
 }
 
-func PushIntoQueue(cnt []byte,connbuffer *ConnBuffer) *ConnBuffer {
+func PushIntoQueue(cnt []byte,connbuffer *ConnBuffer,roundnum int64) *ConnBuffer {
 
 	value := cnt
-	//fmt.Println("value",string(value))
+	//fmt.Println("Push value",string(value),"size",connbuffer.Size)
+	//fmt.Println("size",connbuffer.Size,roundnum)
 	//node := Node{value,nil}
 	node := new(Node)
 	node.Cnt = value
 	node.Next = nil
-	connbuffer.mutex.RLock()
+	node.RoundNum = roundnum
+	connbuffer.RWmutex.RLock()
 	//defer connbuffer.mutex.Unlock()
 	if connbuffer.Size < length {
 		if connbuffer.Top == nil && connbuffer.Size == 0 {
-			connbuffer.mutex.RUnlock()
+			connbuffer.RWmutex.RUnlock()
 
-			connbuffer.mutex.Lock()
+			connbuffer.RWmutex.Lock()
 			connbuffer.Top  = node
 			connbuffer.Tail = node
 			connbuffer.Size++
-			connbuffer.mutex.Unlock()
+			connbuffer.RWmutex.Unlock()
 
 			//fmt.Println("value", string(connbuffer.Top.Cnt))
 			return connbuffer
 		} else {
-			connbuffer.mutex.RUnlock()
+			connbuffer.RWmutex.RUnlock()
 
-			connbuffer.mutex.Lock()
+			connbuffer.RWmutex.Lock()
 			//fmt.Println("value", string(connbuffer.Top.Cnt))
-			connbuffer.Tail.Next = node
-			connbuffer.Tail = connbuffer.Tail.Next
-			connbuffer.Size++
-			connbuffer.mutex.Unlock()
+			connbuffer = SortInBuffer(connbuffer,node)
+			//connbuffer.Tail.Next = node
+			//connbuffer.Tail = connbuffer.Tail.Next
+			//connbuffer.Size++
+			connbuffer.RWmutex.Unlock()
 
 			return connbuffer
 		}
@@ -76,26 +82,26 @@ func PushIntoQueue(cnt []byte,connbuffer *ConnBuffer) *ConnBuffer {
 		*size++
 	}*/
 
-	connbuffer.mutex.RUnlock()
+	connbuffer.RWmutex.RUnlock()
 	return connbuffer
 }
 
 func PopFromQueue(connbuffer *ConnBuffer) (*Node,*ConnBuffer) {
-	connbuffer.mutex.RLock()
+	connbuffer.RWmutex.RLock()
 	//defer connbuffer.mutex.Unlock()
 	if connbuffer.Size > 0 && connbuffer.Top != nil {
 		temp := connbuffer.Top
-		connbuffer.mutex.RUnlock()
+		connbuffer.RWmutex.RUnlock()
 
-		connbuffer.mutex.Lock()
+		connbuffer.RWmutex.Lock()
 		connbuffer.Top = connbuffer.Top.Next
 		connbuffer.Size--
-		connbuffer.mutex.Unlock()
+		connbuffer.RWmutex.Unlock()
 
 		return temp,connbuffer
 	}
 
-	connbuffer.mutex.RUnlock()
+	connbuffer.RWmutex.RUnlock()
 	return nil,connbuffer
 }
 
@@ -110,6 +116,8 @@ func ParserBufferQueue(cnt []byte,remoteAddr string) *Model.ReqEx {
 	reqex.Request    = *req
 	reqex.UserId     = req.UserID
 	reqex.RemoteAddr = remoteAddr
+	reqex.DataType   = req.DataType
+	reqex.RoundNum   = req.RoundNum
 
 	return &reqex
 }

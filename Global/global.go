@@ -5,12 +5,14 @@ import (
 	"net"
 	"sync"
 )
-//TODO-RWLOCK USE
+
 type Conns struct {
-	RWlock          sync.RWMutex
-	Conn            map[string]net.Conn
-	PlayersChannel   map[string]chan int
- 	ConnCount       int
+	RWlock             sync.RWMutex
+	Conn               map[string]net.Conn
+	PlayersChannel     map[string]chan int64
+	PlayersChannelAck  map[string]chan int64           //读取buffer中reqack类型数据的信号
+ 	ConnCount          int
+ 	RoundNum           int64                         //当前回合数
 }
 
 var (
@@ -25,6 +27,7 @@ var (
 	//PlayersChannel     map[string]chan int            //每个玩家独自的channel
 	DebugLogger        chan string                    //输出到log文件的Logger channel
 	Connstruct         Conns
+
 )
 
 const LogFileName = "LogFile.log"
@@ -40,7 +43,9 @@ func init() {
 	//PlayersChannel   = make(map[string]chan int, 5)
 	DebugLogger      = make(chan string, 10)
 	Connstruct.Conn  = make(map[string]net.Conn,5)
-	Connstruct.PlayersChannel = make(map[string]chan int, 5)
+	Connstruct.PlayersChannel    = make(map[string]chan int64, 5)
+	Connstruct.PlayersChannelAck = make(map[string]chan int64, 5)
 	Connstruct.ConnCount = 0
-	Connstruct.RWlock = sync.RWMutex{}
+	Connstruct.RoundNum  = 0
+	Connstruct.RWlock    = sync.RWMutex{}
 }
