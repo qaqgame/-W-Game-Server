@@ -21,7 +21,7 @@ LOOP:
 				//所有人连接上，开启转发计时器和转发器
 				for _,v := range Global.Connstruct.Conn {
 					rw := bufio.NewReadWriter(bufio.NewReader(v),bufio.NewWriter(v))
-					_,err := rw.Write([]byte("all player connected"))
+					_,err := rw.Write([]byte("GameStart"))
 					if err != nil {
 						fmt.Println(err)
 						//loginfo := Log.GetTransferInfo()
@@ -35,6 +35,7 @@ LOOP:
 					}
 				}
 				go ForwardData()
+				fmt.Println("111212")
 				go ForwardingTimer()
 				break LOOP
 			}

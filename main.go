@@ -50,7 +50,7 @@ func main() {
 		//统计已有的连接数，将连接数传入channel,根据连接数判断游戏开始时间---start.go进程
 		Global.Connstruct.ConnCount++
 		Global.Connstruct.RWlock.Unlock()
-		Global.ConnEstablish <- Global.Connstruct.ConnCount
+		//Global.ConnEstablish <- Global.Connstruct.ConnCount
 
 		//连接是否超时计时器channel
 		timerChan := make(chan int,1)
@@ -69,9 +69,14 @@ func Timer(conn net.Conn,timerChan chan int) {
 	for true {
 		select {
 		case <-timerChan:
-			t.Reset(10*time.Second)
+			t.Reset(timer)
 		case <-t.C:
 			fmt.Println("OUTLINE")
+			//fmt.Println("Count:",Global.Count)
+			//_,err := conn.Write([]byte("yes"))
+			//if err != nil {
+			//	fmt.Println("outtime",err)
+			//}
 			conn.Close()    //关闭连接
 			//删除连接
 			delete(Global.Connstruct.Conn,conn.RemoteAddr().String())
