@@ -13,7 +13,7 @@ import (
 //处理高优先级的超时情况
 func ForwardData()  {
 	fmt.Println("FordwardData process")
-	infotype := 2
+	//infotype := 2
 	count := 0
 	var res Model.Res
 	tempkey := make([]string,0)
@@ -27,16 +27,17 @@ func ForwardData()  {
 				//Global.Connstruct.RWlock.RUnlock()
 				continue
 			} else {
-				if infotype == 2 {
-					res.DataType = 1
-				} else if infotype == 3 {
-					res.DataType = 4
-				}
+				//if infotype == 2 {
+				//	res.DataType = 1
+				//} else if infotype == 3 {
+				//	res.DataType = 4
+				//}
 				if count == 0 {
 					res.Result = "failed"
 				} else {
 					res.Result = "success"
 				}
+				res.DataType = 1
 				res.RoundNum = Global.Connstruct.RoundNum
 				resp := Parser.CreateRes(res)
 				//fmt.Println("timeout resp:",resp)
@@ -51,29 +52,40 @@ func ForwardData()  {
 				//fmt.Println("Roundnum:",Global.Connstruct.RoundNum)
 				//fmt.Println("before forward1",infotype)
 				Forwarding(Global.Connstruct.Conn,resp)
-				if infotype == 3 {
-					Global.Connstruct.RWlock.Lock()
-					Global.Connstruct.RoundNum++
-					Global.Connstruct.RWlock.Unlock()
-					fmt.Println(Global.Connstruct.RoundNum)
-				}
+
+				Global.Connstruct.RWlock.Lock()
+				Global.Connstruct.RoundNum++
+				Global.Connstruct.RWlock.Unlock()
+				fmt.Println(Global.Connstruct.RoundNum)
+
+				//if infotype == 3 {
+				//	Global.Connstruct.RWlock.Lock()
+				//	Global.Connstruct.RoundNum++
+				//	Global.Connstruct.RWlock.Unlock()
+				//	fmt.Println(Global.Connstruct.RoundNum)
+				//}
 				//使用缓冲区，发送信号从缓冲区中读取数据
-				//Global.Connstruct.RWlock.Lock()
-				if infotype == 2 {
-					for _,v := range tempkey {
-						if _,ok:= Global.Connstruct.PlayersChannelAck[v];ok {
-							Global.Connstruct.PlayersChannelAck[v] <- 1
-						}
+				for _,v := range tempkey {
+					if _,ok:= Global.Connstruct.PlayersChannel[v];ok {
+						Global.Connstruct.PlayersChannel[v] <- 1
 					}
-					infotype = 3
-				} else if infotype == 3 {
-					for _,v := range tempkey {
-						if _,ok:= Global.Connstruct.PlayersChannel[v];ok {
-							Global.Connstruct.PlayersChannel[v] <- 1
-						}
-					}
-					infotype = 2
 				}
+				//Global.Connstruct.RWlock.Lock()
+				//if infotype == 2 {
+				//	for _,v := range tempkey {
+				//		if _,ok:= Global.Connstruct.PlayersChannelAck[v];ok {
+				//			Global.Connstruct.PlayersChannelAck[v] <- 1
+				//		}
+				//	}
+				//	infotype = 3
+				//} else if infotype == 3 {
+				//	for _,v := range tempkey {
+				//		if _,ok:= Global.Connstruct.PlayersChannel[v];ok {
+				//			Global.Connstruct.PlayersChannel[v] <- 1
+				//		}
+				//	}
+				//	infotype = 2
+				//}
 				//Global.Connstruct.RWlock.Unlock()
 				tempkey = nil
 				count = 0
@@ -84,23 +96,22 @@ func ForwardData()  {
 		case data := <- Global.AllDataSlice:
 			//fmt.Println("data received forward")
 			//fmt.Println("data",data)
-			//if data.DataType == 2 {
-			//	infotype = 2
+			res.DataType = 1
+
+			//if infotype == 2 {
 			//	res.DataType = 1
-			//} else if data.DataType == 3 {
-			//	infotype = 3
+			//} else if infotype == 3 {
 			//	res.DataType = 4
 			//}
-			if infotype == 2 {
-				res.DataType = 1
-			} else if infotype == 3 {
-				res.DataType = 4
-			}
+
 			tempkey = append(tempkey, data.RemoteAddr)
 			count++
-			if data.DataType == infotype {
-				res.Content = append(res.Content, Model.Cnt{UserID:data.UserId,Opinions:data.Request.Opinions})
-			}
+			//if data.DataType == infotype {
+			//	res.Content = append(res.Content, Model.Cnt{UserID:data.UserId,Opinions:data.Request.Opinions})
+			//}
+
+
+			res.Content = append(res.Content, Model.Cnt{UserID:data.UserId,Opinions:data.Request.Opinions})
 			//组装转发内容体
 			//获取5个数据包时，直接转发，并重置计时器，转发结束重置转发内容体
 			//Global.Connstruct.RWlock.RLock()
@@ -122,30 +133,40 @@ func ForwardData()  {
 				}
 				//fmt.Println("before forward",infotype)
 				Forwarding(Global.Connstruct.Conn,resp)
-				if infotype == 3 {
-					Global.Connstruct.RWlock.Lock()
-					Global.Connstruct.RoundNum++
-					Global.Connstruct.RWlock.Unlock()
-				}
+
+				Global.Connstruct.RWlock.Lock()
+				Global.Connstruct.RoundNum++
+				Global.Connstruct.RWlock.Unlock()
+
+				//if infotype == 3 {
+				//	Global.Connstruct.RWlock.Lock()
+				//	Global.Connstruct.RoundNum++
+				//	Global.Connstruct.RWlock.Unlock()
+				//}
 				res.Content = nil
 				count = 0
 				//使用缓冲区，发送信号从缓冲区中读取数据
-				//Global.Connstruct.RWlock.Lock()
-				if infotype == 2 {
-					for _,v := range tempkey {
-						if _,ok:= Global.Connstruct.PlayersChannelAck[v];ok {
-							Global.Connstruct.PlayersChannelAck[v] <- 1
-						}
+				for _,v := range tempkey {
+					if _,ok:= Global.Connstruct.PlayersChannel[v];ok {
+						Global.Connstruct.PlayersChannel[v] <- 1
 					}
-					infotype = 3
-				} else if infotype == 3 {
-					for _,v := range tempkey {
-						if _,ok:= Global.Connstruct.PlayersChannel[v];ok {
-							Global.Connstruct.PlayersChannel[v] <- 1
-						}
-					}
-					infotype = 2
 				}
+				//Global.Connstruct.RWlock.Lock()
+				//if infotype == 2 {
+				//	for _,v := range tempkey {
+				//		if _,ok:= Global.Connstruct.PlayersChannelAck[v];ok {
+				//			Global.Connstruct.PlayersChannelAck[v] <- 1
+				//		}
+				//	}
+				//	infotype = 3
+				//} else if infotype == 3 {
+				//	for _,v := range tempkey {
+				//		if _,ok:= Global.Connstruct.PlayersChannel[v];ok {
+				//			Global.Connstruct.PlayersChannel[v] <- 1
+				//		}
+				//	}
+				//	infotype = 2
+				//}
 				//Global.Connstruct.RWlock.Unlock()
 				//fmt.Println("?????")
 				tempkey = nil

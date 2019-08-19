@@ -19,8 +19,8 @@ func ConnHandler(conn net.Conn, timerChan chan int) {
 	//控制子进程退出
 	cxt := context.Background()
 	cxt,cancle := context.WithCancel(cxt)
-	cxt1 := context.Background()
-	cxt1,cancle1 := context.WithCancel(cxt1)
+	//cxt1 := context.Background()
+	//cxt1,cancle1 := context.WithCancel(cxt1)
 	//defer cancle()
 	//defer cancle1()
 
@@ -32,7 +32,7 @@ func ConnHandler(conn net.Conn, timerChan chan int) {
 	//bufferchangeBack := make(chan *Buffer.ConnBuffer,1)
 
 	connbuffer  := Buffer.InitQueue()
-	connbuffer2 := Buffer.InitQueue()
+	//connbuffer2 := Buffer.InitQueue()
 
 
 	//bufferchange2     := make(chan *Buffer.ConnBuffer,2)
@@ -55,7 +55,7 @@ func ConnHandler(conn net.Conn, timerChan chan int) {
 	ulength := uint32(0)
 
 	go ReadFromBufferQueue(cxt,remoteAddr,connbuffer)
-	go ReadFromBufferQueue2(cxt1,remoteAddr,connbuffer2)
+	//go ReadFromBufferQueue2(cxt1,remoteAddr,connbuffer2)
 	for true {
 		//处理粘包，并读取数据
 		result = ReadFromConn(databuf,msgbuf,&length,ulength,conn)
@@ -100,7 +100,7 @@ func ConnHandler(conn net.Conn, timerChan chan int) {
 				Global.Connstruct.RWlock.Unlock()
 				//fmt.Println("close !!!")
 				cancle()
-				cancle1()
+				//cancle1()
 				return
 			}
 			//处理正常游戏内容数据包
@@ -123,84 +123,86 @@ func ConnHandler(conn net.Conn, timerChan chan int) {
 				continue
 			}
 
+			//插入buffer
+			Buffer.PushIntoQueue(v,connbuffer,reqmini.RoundNum)
 			//if reqmini.RoundNum == Global.Connstruct.RoundNum && t==0 {
 			//	fmt.Println("value read from conn",string(v))
 			//	t++
 			//}
 
-			if reqmini.DataType == 3 {
-				//fmt.Println("ack",string(v))
-				//fmt.Println("22222")
-				Buffer.PushIntoQueue(v,connbuffer2,reqmini.RoundNum)
-				//fmt.Println(connbuffer2.Size)
-				//select {
-				//case data := <-bufferchangeBack2:
-				//	connbuffer2 = data
-				//	//temp := new(Buffer.ConnBuffer)
-				//	//temp.Top = connbuffer2.Top
-				//	//temp.Tail = connbuffer2.Tail
-				//	//temp.Size = connbuffer2.Size
-				//	//temp.RWmutex = connbuffer2.RWmutex
-				//	Buffer.PushIntoQueue(v,connbuffer2,reqmini.RoundNum)
-				//	fmt.Println(connbuffer2.Size)
-				//	//if *temp != *connbuffer2 {
-				//	//	bufferchange2 <- connbuffer2
-				//	//}
-				//	//bufferchange2 <- connbuffer2
-				//default:
-				//	//temp := new(Buffer.ConnBuffer)
-				//	//temp.Top = connbuffer2.Top
-				//	//temp.Tail = connbuffer2.Tail
-				//	//temp.Size = connbuffer2.Size
-				//	//temp.RWmutex = connbuffer2.RWmutex
-				//	Buffer.PushIntoQueue(v,connbuffer2,reqmini.RoundNum)
-				//	fmt.Println(connbuffer2.Size)
-				//	//fmt.Println(temp,connbuffer2)
-				//	//if *temp != *connbuffer2 {
-				//	//	bufferchange2 <- connbuffer2
-				//	//}
-				//	//bufferchange2 <- connbuffer2
-				//}
-			} else if reqmini.DataType == 2 {
-				//fmt.Println("1111111")
-				Buffer.PushIntoQueue(v,connbuffer,reqmini.RoundNum)
-				//fmt.Println(connbuffer.Size)
-				//fmt.Println("22222222222222")
-				//select {
-				//case data := <-bufferchangeBack:
-				//	//fmt.Println("222222222222222111111111")
-				//	connbuffer = data
-				//	//temp := connbuffer.Top
-				//	//temp := new(Buffer.ConnBuffer)
-				//	//temp.Top = connbuffer.Top
-				//	//temp.Tail = connbuffer.Tail
-				//	//temp.Size = connbuffer.Size
-				//	//temp.RWmutex = connbuffer.RWmutex
-				//	Buffer.PushIntoQueue(v,connbuffer,reqmini.RoundNum)
-				//	fmt.Println(connbuffer.Size)
-				//	//if *temp != *connbuffer {
-				//	//	bufferchange <- connbuffer
-				//	//}
-				//	//bufferchange <- connbuffer
-				//default:
-				//	//fmt.Println("2222222222222222-222222222222")
-				//	//temp := new(Buffer.ConnBuffer)
-				//	//temp.Top = connbuffer.Top
-				//	//temp.Tail = connbuffer.Tail
-				//	//temp.Size = connbuffer.Size
-				//	//temp.RWmutex = connbuffer.RWmutex
-				//	//temp := connbuffer
-				//	Buffer.PushIntoQueue(v,connbuffer,reqmini.RoundNum)
-				//	fmt.Println(connbuffer.Size)
-				//	//fmt.Println("222222222222222-333333333333")
-				//	//fmt.Println(temp,connbuffer)
-				//	//if *temp != *connbuffer {
-				//	//	bufferchange <- connbuffer
-				//	//}
-				//	//bufferchange <- connbuffer
-				//}
-				//fmt.Println("222222222222END")
-			}
+			//if reqmini.DataType == 3 {
+			//	//fmt.Println("ack",string(v))
+			//	//fmt.Println("22222")
+			//	Buffer.PushIntoQueue(v,connbuffer2,reqmini.RoundNum)
+			//	//fmt.Println(connbuffer2.Size)
+			//	//select {
+			//	//case data := <-bufferchangeBack2:
+			//	//	connbuffer2 = data
+			//	//	//temp := new(Buffer.ConnBuffer)
+			//	//	//temp.Top = connbuffer2.Top
+			//	//	//temp.Tail = connbuffer2.Tail
+			//	//	//temp.Size = connbuffer2.Size
+			//	//	//temp.RWmutex = connbuffer2.RWmutex
+			//	//	Buffer.PushIntoQueue(v,connbuffer2,reqmini.RoundNum)
+			//	//	fmt.Println(connbuffer2.Size)
+			//	//	//if *temp != *connbuffer2 {
+			//	//	//	bufferchange2 <- connbuffer2
+			//	//	//}
+			//	//	//bufferchange2 <- connbuffer2
+			//	//default:
+			//	//	//temp := new(Buffer.ConnBuffer)
+			//	//	//temp.Top = connbuffer2.Top
+			//	//	//temp.Tail = connbuffer2.Tail
+			//	//	//temp.Size = connbuffer2.Size
+			//	//	//temp.RWmutex = connbuffer2.RWmutex
+			//	//	Buffer.PushIntoQueue(v,connbuffer2,reqmini.RoundNum)
+			//	//	fmt.Println(connbuffer2.Size)
+			//	//	//fmt.Println(temp,connbuffer2)
+			//	//	//if *temp != *connbuffer2 {
+			//	//	//	bufferchange2 <- connbuffer2
+			//	//	//}
+			//	//	//bufferchange2 <- connbuffer2
+			//	//}
+			//} else if reqmini.DataType == 2 {
+			//	//fmt.Println("1111111")
+			//	Buffer.PushIntoQueue(v,connbuffer,reqmini.RoundNum)
+			//	//fmt.Println(connbuffer.Size)
+			//	//fmt.Println("22222222222222")
+			//	//select {
+			//	//case data := <-bufferchangeBack:
+			//	//	//fmt.Println("222222222222222111111111")
+			//	//	connbuffer = data
+			//	//	//temp := connbuffer.Top
+			//	//	//temp := new(Buffer.ConnBuffer)
+			//	//	//temp.Top = connbuffer.Top
+			//	//	//temp.Tail = connbuffer.Tail
+			//	//	//temp.Size = connbuffer.Size
+			//	//	//temp.RWmutex = connbuffer.RWmutex
+			//	//	Buffer.PushIntoQueue(v,connbuffer,reqmini.RoundNum)
+			//	//	fmt.Println(connbuffer.Size)
+			//	//	//if *temp != *connbuffer {
+			//	//	//	bufferchange <- connbuffer
+			//	//	//}
+			//	//	//bufferchange <- connbuffer
+			//	//default:
+			//	//	//fmt.Println("2222222222222222-222222222222")
+			//	//	//temp := new(Buffer.ConnBuffer)
+			//	//	//temp.Top = connbuffer.Top
+			//	//	//temp.Tail = connbuffer.Tail
+			//	//	//temp.Size = connbuffer.Size
+			//	//	//temp.RWmutex = connbuffer.RWmutex
+			//	//	//temp := connbuffer
+			//	//	Buffer.PushIntoQueue(v,connbuffer,reqmini.RoundNum)
+			//	//	fmt.Println(connbuffer.Size)
+			//	//	//fmt.Println("222222222222222-333333333333")
+			//	//	//fmt.Println(temp,connbuffer)
+			//	//	//if *temp != *connbuffer {
+			//	//	//	bufferchange <- connbuffer
+			//	//	//}
+			//	//	//bufferchange <- connbuffer
+			//	//}
+			//	//fmt.Println("222222222222END")
+			//}
 		}
 		//Global.DebugLogger <- t
 		//t=0
