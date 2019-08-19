@@ -84,17 +84,24 @@ func ForwardData()  {
 		case data := <- Global.AllDataSlice:
 			//fmt.Println("data received forward")
 			//fmt.Println("data",data)
-			if data.DataType == 2 {
-				infotype = 2
+			//if data.DataType == 2 {
+			//	infotype = 2
+			//	res.DataType = 1
+			//} else if data.DataType == 3 {
+			//	infotype = 3
+			//	res.DataType = 4
+			//}
+			if infotype == 2 {
 				res.DataType = 1
-			} else if data.DataType == 3 {
-				infotype = 3
+			} else if infotype == 3 {
 				res.DataType = 4
 			}
 			tempkey = append(tempkey, data.RemoteAddr)
 			count++
+			if data.DataType == infotype {
+				res.Content = append(res.Content, Model.Cnt{UserID:data.UserId,Opinions:data.Request.Opinions})
+			}
 			//组装转发内容体
-			res.Content = append(res.Content, Model.Cnt{UserID:data.UserId,Opinions:data.Request.Opinions})
 			//获取5个数据包时，直接转发，并重置计时器，转发结束重置转发内容体
 			//Global.Connstruct.RWlock.RLock()
 			if count == Global.Connstruct.ConnCount {
@@ -153,7 +160,7 @@ func ForwardData()  {
 
 //转发response
 func Forwarding(conn map[string]net.Conn, resp string) {
-	fmt.Println("forwarding")
+	//fmt.Println("forwarding")
 	Global.Connstruct.RWlock.RLock()
 	if Global.Connstruct.ConnCount == 0 {
 		Global.Connstruct.RWlock.RUnlock()
@@ -186,7 +193,7 @@ func Forwarding(conn map[string]net.Conn, resp string) {
 //c是计时器使用的计时channel, send是转发时的signal channel
 func ForwardingTimer() {
 	//fmt.Println("timer",time.Now().Format(time.RFC3339Nano))
-	timer := time.Duration(5*time.Second)
+	timer := time.Duration(500*time.Millisecond)
 	t := time.NewTimer(timer)
 
 	defer t.Stop()
@@ -194,7 +201,7 @@ func ForwardingTimer() {
 	for true {
 		select {
 		case <-Global.Forwardtimer:
-			fmt.Println("reset")
+			//fmt.Println("reset")
 			t.Reset(timer)
 		case <-t.C:
 			fmt.Println("Timeout, Forwarding!")

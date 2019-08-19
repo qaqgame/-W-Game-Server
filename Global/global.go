@@ -39,7 +39,7 @@ func init() {
 	Forwardtimer     = make(chan int, 1)
 	//ConnCount        = 0
 	ConnEstablish    = make(chan int, 1)
-	PlayerNum        = 1
+	PlayerNum        = 3
 	//PlayersChannel   = make(map[string]chan int, 5)
 	DebugLogger      = make(chan string, 10)
 	Connstruct.Conn  = make(map[string]net.Conn,5)
