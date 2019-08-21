@@ -5,7 +5,6 @@ import (
 )
 
 func SortInBuffer(connbuffer *ConnBuffer, curr *Node) {
-	//fmt.Println("bufferfffff",connbuffer)
 	temp := connbuffer.Top
 	if curr.RoundNum < Global.Connstruct.RoundNum {
 		return
@@ -19,7 +18,6 @@ func SortInBuffer(connbuffer *ConnBuffer, curr *Node) {
 			return
 		}
 	}
-	//fmt.Println("start sortinbuffer")
 	for {
 		if temp.Next == nil {
 			if temp.RoundNum < curr.RoundNum {

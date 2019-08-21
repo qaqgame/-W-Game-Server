@@ -53,6 +53,8 @@ func main() {
 		//Global.ConnEstablish <- Global.Connstruct.ConnCount
 
 		//连接是否超时计时器channel
+		Global.ConnStatus[conn.RemoteAddr().String()] = 1
+		//fmt.Println(Global.ConnStatus)
 		timerChan := make(chan int,1)
 		//开启计时器和连接处理进程
 		go Timer(conn,timerChan)
@@ -62,6 +64,7 @@ func main() {
 
 //计时器函数，保持长连接，并判断掉线状态
 func Timer(conn net.Conn,timerChan chan int) {
+	remoteAddr := conn.RemoteAddr().String()
 	timer := time.Duration(10*time.Second)
 	t := time.NewTimer(timer)
 
@@ -72,14 +75,9 @@ func Timer(conn net.Conn,timerChan chan int) {
 			t.Reset(timer)
 		case <-t.C:
 			fmt.Println("OUTLINE")
-			//fmt.Println("Count:",Global.Count)
-			//_,err := conn.Write([]byte("yes"))
-			//if err != nil {
-			//	fmt.Println("outtime",err)
-			//}
-			conn.Close()    //关闭连接
+			//conn.Close()    //关闭连接
 			//删除连接
-			delete(Global.Connstruct.Conn,conn.RemoteAddr().String())
+			Forward.CloseConn(remoteAddr)
 			return
 			//
 		}

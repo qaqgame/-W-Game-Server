@@ -39,6 +39,8 @@ func ReadFromConn(databuf []byte, msgbuf *bytes.Buffer, length *int, ulength uin
 					// delete(Global.Conn,remoteaddr)
 					return [][]byte{[]byte("conn close")}
 			}
+			fmt.Println("conn closed1")
+			return [][]byte{[]byte("conn close")}
 		}
 		if err != io.EOF{
 			result = append(result,databuf[:n]...)

@@ -27,7 +27,7 @@ var (
 	//PlayersChannel     map[string]chan int            //每个玩家独自的channel
 	DebugLogger        chan string                    //输出到log文件的Logger channel
 	Connstruct         Conns
-
+	ConnStatus         map[string]int
 )
 
 const LogFileName = "LogFile.log"
@@ -39,7 +39,7 @@ func init() {
 	Forwardtimer     = make(chan int, 1)
 	//ConnCount        = 0
 	ConnEstablish    = make(chan int, 1)
-	PlayerNum        = 3
+	PlayerNum        = 2
 	//PlayersChannel   = make(map[string]chan int, 5)
 	DebugLogger      = make(chan string, 10)
 	Connstruct.Conn  = make(map[string]net.Conn,5)
@@ -48,4 +48,5 @@ func init() {
 	Connstruct.ConnCount = 0
 	Connstruct.RoundNum  = 0
 	Connstruct.RWlock    = sync.RWMutex{}
+	ConnStatus       = make(map[string]int, 5)
 }
