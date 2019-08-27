@@ -29,3 +29,14 @@ func ParserReqMini(data []byte) *Model.ReqMini {
 	}
 	return &reqmini
 }
+
+func ParserStateSync(data []byte) *Model.StateSync {
+	var statesync Model.StateSync
+	err := json.Unmarshal(data,&statesync)
+	if err != nil {
+		fmt.Println("ParserStateSync Json Error:",err)
+		fmt.Println("json error:",string(data))
+		return nil
+	}
+	return &statesync
+}

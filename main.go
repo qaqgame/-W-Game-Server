@@ -9,9 +9,10 @@ import (
 	"wGame/Receive"
 )
 
-//func init() {
-//	go Log.LogController()
-//}
+func init() {
+	//go Log.LogController()
+	go Receive.StateSyncDataHandler()
+}
 
 func main() {
 	Global.Count = 0                      //测试时使用的临时数据,统计接收了多少数据
@@ -44,17 +45,6 @@ func main() {
 			//Global.DebugLogger <- loginfo + err.Error()
 		}
 
-		Global.Connstruct.RWlock.Lock()
-		Global.Connstruct.Conn[conn.RemoteAddr().String()] = conn
-		//fmt.Println(len(Global.Connstruct.Conn),"111rewr")
-		//统计已有的连接数，将连接数传入channel,根据连接数判断游戏开始时间---start.go进程
-		Global.Connstruct.ConnCount++
-		Global.Connstruct.RWlock.Unlock()
-		//Global.ConnEstablish <- Global.Connstruct.ConnCount
-
-		//连接是否超时计时器channel
-		Global.ConnStatus[conn.RemoteAddr().String()] = 1
-		//fmt.Println(Global.ConnStatus)
 		timerChan := make(chan int,1)
 		//开启计时器和连接处理进程
 		go Timer(conn,timerChan)

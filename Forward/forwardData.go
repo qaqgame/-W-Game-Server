@@ -18,7 +18,6 @@ func ForwardData()  {
 	for {
 		select {
 		case <- Global.Forwardingsignal:
-			//fmt.Println("timeout fording")
 			Global.Connstruct.RWlock.RLock()
 			if Global.Connstruct.ConnCount == 0 {
 				fmt.Println("no connnect")
@@ -26,28 +25,11 @@ func ForwardData()  {
 				continue
 			} else {
 				Global.Connstruct.RWlock.RUnlock()
-				if count == 0 {
-					res.Result = "failed"
-				} else {
-					res.Result = "success"
-				}
+				res.Result = "timeout"
 				res.RoundNum = Global.Connstruct.RoundNum
-				//resp := Parser.CreateRes(res)
-				////fmt.Println("timeout resp:",resp)
-				//if resp == "" {
-				//	count = 0
-				//	Global.Connstruct.RWlock.Lock()
-				//	Global.Connstruct.RoundNum++
-				//	Global.Connstruct.RWlock.Unlock()
-				//	Global.Forwardingsignal <- 1
-				//	continue
-				//}
 
 				Forwarding(res)
 
-				//Global.Connstruct.RWlock.Lock()
-				//Global.Connstruct.RoundNum++
-				//Global.Connstruct.RWlock.Unlock()
 				fmt.Println(Global.Connstruct.RoundNum)
 
 				//使用缓冲区，发送信号从缓冲区中读取数据
@@ -75,16 +57,6 @@ func ForwardData()  {
 				res.RoundNum = Global.Connstruct.RoundNum
 				Global.Connstruct.RWlock.RUnlock()
 				res.Result = "success"
-				//resp := Parser.CreateRes(res)
-				//if resp == "" {
-				//	Global.Connstruct.RWlock.Lock()
-				//	Global.Connstruct.RoundNum++
-				//	Global.Connstruct.RWlock.Unlock()
-				//	Global.Forwardingsignal <- 1
-				//	count = 0
-				//	continue
-				//}
-				//fmt.Println("before forward",infotype)
 				Forwarding(res)
 
 				res.Content = nil
@@ -113,18 +85,31 @@ func Forwarding(res Model.Res) {
 		Global.Connstruct.RWlock.RUnlock()
 		return
 	}
+	res.DataType = 1
+	respt := Parser.CreateRes(res)
+
+	if Global.Connstruct.HaveReConn {
+		res.DataType = 8
+		Global.Connstruct.HaveReConn = false
+	} else {
+		res.DataType = 1
+	}
 	Global.Connstruct.RWlock.RUnlock()
 
-	res.DataType = 1
 	resp := Parser.CreateRes(res)
-	fmt.Println(resp)
+	//fmt.Println(string(resp))
 
 	Global.Connstruct.RWlock.Lock()
+	if Global.Connstruct.StartStore==true && Global.Connstruct.FlagRoundNum==-1 {
+		Global.Connstruct.ReconnData = append(Global.Connstruct.ReconnData, respt...)
+	} else if Global.Connstruct.StartStore==true&&res.RoundNum>Global.Connstruct.FlagRoundNum {
+		Global.Connstruct.ReconnData = append(Global.Connstruct.ReconnData, respt...)
+	}
 	for _,v := range Global.Connstruct.Conn {
 		remoteAddr := v.RemoteAddr().String()
 		//获取每个conn，向每个conn转发
 		rw := bufio.NewReadWriter(bufio.NewReader(v),bufio.NewWriter(v))
-		_,err := rw.Write([]byte(resp))
+		_,err := rw.Write(resp)
 		if err != nil {
 			fmt.Println("Write error",err)
 			//loginfo := Log.GetTransferInfo()
@@ -133,8 +118,8 @@ func Forwarding(res Model.Res) {
 		err = rw.Flush()
 		if err != nil {
 			fmt.Println("Flush err",err)
-			fmt.Println(Global.ConnStatus)
-			CloseConnWhileForWarding(remoteAddr)
+			fmt.Println(Global.Connstruct.ConnStatus)
+			CloseConn(remoteAddr)
 			fmt.Println("Closed")
 			//loginfo := Log.GetTransferInfo()
 			//Global.DebugLogger <- loginfo + err.Error()

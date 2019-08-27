@@ -26,5 +26,6 @@ type HashValue struct {
 
 type ReqMini struct {
 	DataType       int         `json:"datatype"`
+	UserID         string      `json:"UserID"`
 	RoundNum       int64       `json:"Roundnum"`
 }

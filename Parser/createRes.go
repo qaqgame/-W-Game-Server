@@ -7,24 +7,33 @@ import (
 )
 
 
-func CreateRes(data Model.Res) string {
+func CreateRes(data Model.Res) []byte {
 	resp, err := json.Marshal(&data)
 	if err != nil {
 		fmt.Println(err)
 		//loginfo := Log.GetTransferInfo()
 		//Global.DebugLogger <- loginfo + err.Error()
-		return ""
+		return nil
 	}
-	return string(resp)
+	return resp
 }
 
-func CreateResErr(data Model.ResErr) string {
+func CreateResErr(data Model.ResErr) []byte {
 	resp, err := json.Marshal(&data)
 	if err != nil {
 		fmt.Println(err)
 		//loginfo := Log.GetTransferInfo()
 		//Global.DebugLogger <- loginfo + err.Error()
-		return ""
+		return nil
 	}
-	return string(resp)
+	return resp
+}
+
+func CreateReconndata(data Model.StateSync) []byte {
+	resp, err := json.Marshal(&data)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	return resp
 }
